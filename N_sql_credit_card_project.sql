@@ -10,6 +10,8 @@ SET Week_Start_Date = STR_TO_DATE(Week_Start_Date, '%d-%m-%Y');
 ALTER TABLE credit_card
 MODIFY COLUMN Week_Start_Date DATE;
 
+describe credit_card;
+
 ALTER TABLE credit_card
 CHANGE COLUMN `Use Chip` `use_chip` text;
 
@@ -23,27 +25,29 @@ describe credit_card;
 
 -- 1. Total Spending per Card i.e Chip  and Swipe :
 
-select * from credit_card;
-select sum(Total_Trans_Amt) as Total_card_transaction  
-from credit_card
-where use_chip = 'Chip ' or use_chip ='Swipe ';
+select use_chip, sum(Total_Trans_Amt) as Total_card_transaction  
+	   from credit_card
+       where use_chip = 'Chip ' or use_chip ='Swipe '
+       group by use_chip;
 
 -- 2. Monthly Spending Trend for a Card
-select month(Week_Start_Date) as Month, sum(Total_Trans_Amt) as Total_monthly_spending 
-from credit_card
-group by 1 order by 1;
+select monthname(Week_Start_Date) as Month, 
+			sum(Total_Trans_Amt) as Total_monthly_spending 
+			from credit_card
+			group by month(Week_Start_Date),monthname(Week_Start_Date)
+		    order by month(Week_Start_Date);
 
 -- 3. Highest Transaction Amount per Card
 
 select Total_Trans_Amt as Highest_transaction_amount from credit_card
-order by 1 desc limit 1;
+order by Total_Trans_Amt desc limit Total_Trans_Amt;
 
 select Total_Trans_Amt as Highest_transaction_amount from credit_card
 order by 1 desc limit 5;
 
 -- 4. Top expenses Based on Spending
 select exp_type, Total_Trans_Amt from credit_card
-order by 2 desc limit 5;
+order by Total_Trans_Amt desc limit 5;
 
 -- 5. Average Transaction Amount per Card
 select avg(Total_Trans_Amt) as Avg_transaction_amt from credit_card;
@@ -51,11 +55,13 @@ select avg(Total_Trans_Amt) as Avg_transaction_amt from credit_card;
 -- 6. Find Cards with the highest int rate and annual fee
 
 select client_No,Annual_Fees, Interest_Earned from credit_card
-order by 2, 3 desc limit 10;
+order by Annual_Fees, Interest_Earned desc limit 10;
 
 -- 7. User's Total Spending in each category
 
-select exp_type, sum(Total_Trans_Amt) as Total_amt_spend from credit_card group by 1 order by 2;
+select exp_type as Exp_Category, sum(Total_Trans_Amt) as Total_amt_spend 
+	   from credit_card 
+       group by Exp_Category order by Total_amt_spend  desc;
 
 
 /*  8. Users Who Spent Over a Certain Amount
@@ -67,24 +73,30 @@ and Week_Start_Date between '2023-10-10' and '2023-12-24' ;
 
 -- 9. Days with Highest Spending
 
-SELECT Week_Start_Date, SUM(Total_Trans_Amt) AS total_spent
+SELECT day(Week_Start_Date) as Days_with_Max_Spendings, SUM(Total_Trans_Amt) AS Total_spent
+FROM credit_card
+GROUP BY day(Week_Start_Date)
+ORDER BY Total_spent DESC
+LIMIT 10;
+
+
+
+
+SELECT day(Week_Start_Date), SUM(Total_Trans_Amt) AS total_spent
 FROM credit_card
 WHERE exp_type = 'Grocery'
-GROUP BY Week_Start_Date
-ORDER BY 2 DESC
+GROUP BY day(Week_Start_Date)
+ORDER BY day(Week_Start_Date) DESC
 LIMIT 10;
 
 -- 10. Active Cards with No Transactions in Last 30 Days
 
-SELECT card_id
-FROM cards
-WHERE card_id NOT IN (
-    SELECT DISTINCT card_id
-    FROM transactions
-    WHERE transaction_date >= CURRENT_DATE - INTERVAL '30 days'
-)
-ORDER BY card_id;
+SELECT client_No
+FROM credit_card
+    WHERE Week_Start_Date >= CURRENT_DATE() - INTERVAL 30 day
+ORDER BY client_No;
 
+select * from credit_card;
 -- extra queries
 --  Find the Cardholder with the Highest Credit Limit
 
